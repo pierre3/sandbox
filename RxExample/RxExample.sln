@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C# Express 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DrawingFormApp", "ReactiveDrawer\DrawingFormApp.csproj", "{6F89D64B-05CF-4945-A864-D5976A304DDD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveDrawing", "ReactiveDrawing.Shapes\ReactiveDrawing.csproj", "{B76CD186-585D-4D4A-8B6C-B4370739BEDA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Debug|x86.ActiveCfg = Debug|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Debug|x86.Build.0 = Debug|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Release|Any CPU.ActiveCfg = Release|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Release|Mixed Platforms.Build.0 = Release|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Release|x86.ActiveCfg = Release|x86
+		{6F89D64B-05CF-4945-A864-D5976A304DDD}.Release|x86.Build.0 = Release|x86
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{B76CD186-585D-4D4A-8B6C-B4370739BEDA}.Release|x86.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
