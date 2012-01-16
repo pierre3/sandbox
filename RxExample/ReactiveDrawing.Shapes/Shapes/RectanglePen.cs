@@ -50,10 +50,10 @@ namespace ReactiveDrawing.Shapes
       using (Pen pen = new Pen(Color))
       {
         pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-        g.DrawRectangle(pen, this.Bounds.Abs());
+        this.DrawShape(g, pen);
       }
     }
-    
+
     /// <summary>
     /// ドラッグ中に実行される処理
     /// </summary>
@@ -62,8 +62,8 @@ namespace ReactiveDrawing.Shapes
     {
       this.m_isDragging = true;
       Bounds = new Rectangle(
-                  e.startLocation,
-                  (Size)e.Location - (Size)e.startLocation);
+                  e.StartLocation,
+                  (Size)e.Location - (Size)e.StartLocation);
     }
 
     /// <summary>
@@ -82,5 +82,15 @@ namespace ReactiveDrawing.Shapes
     }
 
     #endregion Public Methods
+
+    /// <summary>
+    /// 図形の描画
+    /// </summary>
+    /// <param name="g">Graphicsオブジェクト</param>
+    /// <param name="pen">ペン</param>
+    protected virtual void DrawShape(Graphics g, Pen pen)
+    {
+      g.DrawRectangle(pen, this.Bounds.Abs());
+    }
   }
 }

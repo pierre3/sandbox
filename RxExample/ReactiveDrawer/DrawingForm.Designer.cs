@@ -1,5 +1,8 @@
 ﻿namespace DrawingFormApp
 {
+  　/// <summary>
+  　/// メインフォーム
+  　/// </summary>
     partial class DrawingForm
     {
         /// <summary>

@@ -14,7 +14,7 @@ namespace ReactiveDrawing
   /// </summary>
   public static class ControlExtensions
   {
-    
+
     /// <summary>
     ///  MouseDragイベントのIObservableオブジェクト生成
     /// </summary>
@@ -36,7 +36,7 @@ namespace ReactiveDrawing
       var Up = control.MouseUpAsObservable()
                 .Where(e => e.Button == mouseButton)
                 .Do(e => { if (released != null)released(e); });
-            
+
       return down
               .SelectMany(
               e0 =>
@@ -44,10 +44,10 @@ namespace ReactiveDrawing
                 return
                   move.TakeUntil(Up)
                       .Select(e => new MouseDragEventArgs(e, e0.Location, e0.Location))
-                      .Scan((e1, e2) => new MouseDragEventArgs(e2, e1.startLocation, e1.Location));
+                      .Scan((e1, e2) => new MouseDragEventArgs(e2, e1.StartLocation, e1.Location));
               });
     }
-
+    
     /// <summary>
     ///  MouseDragイベントのIObservableオブジェクト生成(Move_Skip_Take)
     /// </summary>
@@ -65,11 +65,11 @@ namespace ReactiveDrawing
       return
           control.MouseMoveAsObservable()
               .SkipUntil(control.MouseDownAsObservable()
-              .Where(e => e.Button == mouseButton)
-              .Do(captured))
+                          .Where(e => e.Button == mouseButton)
+                          .Do(captured))
               .TakeUntil(control.MouseUpAsObservable()
-              .Where(e => e.Button == mouseButton)
-              .Do(released))
+                          .Where(e => e.Button == mouseButton)
+                          .Do(released))
               .Repeat();
     }
 

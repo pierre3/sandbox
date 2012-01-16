@@ -9,25 +9,7 @@ namespace ReactiveDrawing.Shapes
   /// </summary>
   public class ResizeHandle : Shape
   {
-    #region Events
-    
-    /// <summary>ドロップ通知イベント</summary>
-    public event EventHandler NotifyDrop;
-
-    /// <summary>ドラッグ通知イベント</summary>
-    public event EventHandler<MouseDragEventArgs> NotifyDrag;
-
-    #endregion Events
-
-    #region Private Feilds 
-
-    /// <summary>自分を表示すべき位置を取得するデリゲート</summary>
-    private Func<Point> m_getAnchor;
-
-    #endregion Private Feilds
-
     #region Constructors
-
     /// <summary>
     /// コンストラクタ
     /// </summary>
@@ -42,11 +24,9 @@ namespace ReactiveDrawing.Shapes
       this.Cursor = cursor;
       this.Color = color;
     }
-    
-    #endregion Constructors
+    #endregion 
 
     #region Public Methods
-    
     /// <summary>
     /// マウスポインタとの当たり判定
     /// </summary>
@@ -63,8 +43,7 @@ namespace ReactiveDrawing.Shapes
     /// <param name="e">マウスドラッグイベントデータ</param>
     public override void Drag(MouseDragEventArgs e)
     {
-      if (NotifyDrag != null)
-        NotifyDrag(this, e);
+        this.OnDraged(e);
     }
 
     /// <summary>
@@ -75,8 +54,7 @@ namespace ReactiveDrawing.Shapes
     /// </returns>
     public override IDraggable Drop()
     {
-      if (NotifyDrop != null)
-        NotifyDrop(this, new EventArgs());
+      this.OnDropped(new EventArgs());
       return null; 
     }
     
@@ -104,8 +82,11 @@ namespace ReactiveDrawing.Shapes
                                   this.Bounds.Width,
                                   this.Bounds.Height);
     }
+    #endregion
 
-    #endregion Public Methods
-
+    #region Private Feilds
+    /// <summary>自分を表示すべき位置を取得するデリゲート</summary>
+    private Func<Point> m_getAnchor;
+    #endregion
   }
 }

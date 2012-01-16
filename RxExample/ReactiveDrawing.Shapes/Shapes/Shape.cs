@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace ReactiveDrawing.Shapes
@@ -8,6 +9,22 @@ namespace ReactiveDrawing.Shapes
   /// </summary>
   public abstract class Shape : IShape
   {
+    #region Events
+    /// <summary>ドロップ実行後に発生するイベント</summary>
+    public event EventHandler Dropped
+    {
+      add { this.m_Dropped += value; }
+      remove { this.m_Dropped -= value; }
+    }
+
+    /// <summary>ドラッグ実行後に発生するイベント</summary>
+    public event EventHandler<MouseDragEventArgs> Draged
+    {
+      add { this.m_Draged += value; }
+      remove { this.m_Draged -= value; }
+    }
+    #endregion Events
+
     #region Properties
     /// <summary>マウスカーソル</summary>
     public Cursor Cursor { set; get; }
@@ -20,16 +37,16 @@ namespace ReactiveDrawing.Shapes
 
     /// <summary>ドラッグされている間 Trueを返す</summary>
     public bool IsDragging { get { return m_isDragging; } }
-    
+
 
     /// <summary>選択されている間 Trueを返す</summary>
     public bool IsSelected { set; get; }
 
-    /// <summary>グループID</summary>
-    public object Group { get; set; }
+    /// <summary>親オブジェクト</summary>
+    public IShape Parent { get; set; }
 
     #endregion
-    
+
     #region Constructors
     /// <summary>
     /// コンストラクタ
@@ -55,7 +72,7 @@ namespace ReactiveDrawing.Shapes
     {
       this.Bounds = bounds.Abs();
       this.Color = color;
-      this.Group = new object();
+      this.Parent = this;
     }
     #endregion
 
@@ -86,9 +103,29 @@ namespace ReactiveDrawing.Shapes
     /// ドロップ時に生成されるIDraggableオブジェクト
     /// </returns>
     public abstract IDraggable Drop();
-    #endregion abstract Methods
+    #endregion
 
     #region protected Methods
+    /// <summary>
+    /// Dragedイベントを発生させる
+    /// </summary>
+    /// <param name="e">マウスドラッグイベントデータ</param>
+    protected void OnDraged(MouseDragEventArgs e)
+    {
+      if (this.m_Draged != null)
+        this.m_Draged(this, e);
+    }
+
+    /// <summary>
+    /// Droppedイベントを発生させる
+    /// </summary>
+    /// <param name="e">イベントデータ</param>
+    protected void OnDropped(EventArgs e)
+    {
+      if (this.m_Dropped != null)
+        this.m_Dropped(this, e);
+
+    }
     /// <summary>
     /// 外接矩形の設定
     /// </summary>
@@ -107,7 +144,7 @@ namespace ReactiveDrawing.Shapes
         handle.SetLocation();
       }
     }
-    
+
     /// <summary>
     /// 外接矩形の設定
     /// </summary>
@@ -132,13 +169,17 @@ namespace ReactiveDrawing.Shapes
     {
       this.SetBounds(rect.X, rect.Y, rect.Width, rect.Height);
     }
-    #endregion  protected Methods
+    #endregion
 
     #region protected Feilds
     /// <summary>リサイズハンドル</summary>
     protected ResizeHandle[] m_handles = new ResizeHandle[0];
     /// <summary>ドラッグされている間 Trueを返す</summary>
     protected bool m_isDragging;
-    #endregion protected Feilds
+    /// <summary>ドロップ処理後イベント</summary>
+    protected EventHandler m_Dropped;
+    /// <summary>ドラッグ処理後イベント</summary>
+    protected EventHandler<MouseDragEventArgs> m_Draged;
+    #endregion
   }
 }

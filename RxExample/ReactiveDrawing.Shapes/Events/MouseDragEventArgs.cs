@@ -9,7 +9,7 @@ namespace ReactiveDrawing
   public class MouseDragEventArgs : MouseEventArgs
   {
     /// <summary>マウスボタン押下位置</summary>
-    public Point startLocation { set; get; }
+    public Point StartLocation { set; get; }
     
     /// <summary>直前のマウス位置</summary>
     public Point LastLocation { set; get; }
@@ -23,7 +23,7 @@ namespace ReactiveDrawing
     public MouseDragEventArgs(MouseEventArgs moveArgs, Point startLocation, Point lastLocation)
       : base(moveArgs.Button, moveArgs.Clicks, moveArgs.X, moveArgs.Y, moveArgs.Delta)
     {
-      this.startLocation = startLocation;
+      this.StartLocation = startLocation;
       this.LastLocation = lastLocation;
     }
   }

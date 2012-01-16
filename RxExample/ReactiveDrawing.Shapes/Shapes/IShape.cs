@@ -1,4 +1,4 @@
-﻿
+﻿using System.Drawing;
 namespace ReactiveDrawing.Shapes
 {
   /// <summary>
@@ -7,10 +7,13 @@ namespace ReactiveDrawing.Shapes
   /// </summary>
   public interface IShape : IDraggable, IDrawable
   {
+    /// <summary>外接矩形</summary>
+    Rectangle Bounds { get; }
+
     /// <summary>選択状態</summary>
     bool IsSelected { set; get; }
-    
-    /// <summary>グループID</summary>
-    object Group { get; set; }
+
+    /// <summary>親オブジェクト</summary>
+    IShape Parent { get; set; }
   }
 }

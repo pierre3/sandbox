@@ -13,16 +13,24 @@ namespace ReactiveDrawing
   /// </summary>
   public class DrawingManager
   {
+    #region Properties
     /// <summary>規定の描画オブジェクト</summary>
     public IShape DefaultItem { set; get; }
+    #endregion
+
+    #region Constants
+    /// <summary>
+    /// 選択オブジェクト
+    /// </summary>
+    public static readonly SelectRect Selector = new SelectRect(Color.Black);
+    #endregion
 
     #region Private Fields
-    
     private List<IShape> m_shapes;
     private CompositeDisposable m_disposables;
-    
-    #endregion Private Fields
+    #endregion
 
+    #region Public Methods
     /// <summary>
     /// コンストラクタ
     /// </summary>
@@ -32,6 +40,12 @@ namespace ReactiveDrawing
       this.DefaultItem = defaultItem;
       this.m_shapes = new List<IShape>();
       this.m_disposables = new CompositeDisposable();
+      DrawingManager.Selector.Dropped += (o, e) => 
+      {
+        var selectBounds = (o as IShape).Bounds.Abs();
+        this.m_shapes.ForEach(
+          shape => shape.IsSelected = selectBounds.Contains(shape.Bounds));
+      };
     }
 
     /// <summary>
@@ -100,7 +114,7 @@ namespace ReactiveDrawing
           {
             foreach (IShape item in m_shapes)
             {
-              item.IsSelected = item.Group == active.Group;
+              item.IsSelected = item.Parent == active.Parent;
             }
             target.Refresh();
           },
@@ -120,5 +134,7 @@ namespace ReactiveDrawing
       );
 
     }
+    #endregion
+
   }
 }
