@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Collections.Generic;
-using System.Windows.Forms;
-using System.Drawing.Drawing2D;
-using System.Linq;
 namespace ReactiveDrawing.Shapes
 {
   /// <summary>
@@ -39,9 +35,7 @@ namespace ReactiveDrawing.Shapes
     public override void Drag(MouseDragEventArgs e)
     {
       this.m_isDragging = true;
-      Bounds = new Rectangle(
-                  e.StartLocation,
-                  (Size)e.Location - (Size)e.StartLocation);
+      Bounds = new Rectangle(e.StartLocation, (Size)e.Location - (Size)e.StartLocation);
     }
 
     /// <summary>

@@ -1,30 +1,32 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
+﻿using System;
+using System.Drawing;
 
 namespace ReactiveDrawing
 {
   /// <summary>
-  /// マウスドラッグイベントデータ
+  /// マウスドラッグイベント引数
   /// </summary>
-  public class MouseDragEventArgs : MouseEventArgs
+  public class MouseDragEventArgs : EventArgs
   {
     /// <summary>マウスボタン押下位置</summary>
     public Point StartLocation { set; get; }
-    
+
     /// <summary>直前のマウス位置</summary>
     public Point LastLocation { set; get; }
-    
+
+    /// <summary>現在のマウス位置</summary>
+    public Point Location { set; get; }
     /// <summary>
     /// コンストラクタ
     /// </summary>
-    /// <param name="moveArgs">ドラッグ中のマウスイベントデータ</param>
     /// <param name="startLocation">マウスボタンを押下した位置</param>
     /// <param name="lastLocation">直前のマウス位置</param>
-    public MouseDragEventArgs(MouseEventArgs moveArgs, Point startLocation, Point lastLocation)
-      : base(moveArgs.Button, moveArgs.Clicks, moveArgs.X, moveArgs.Y, moveArgs.Delta)
+    /// <param name="Location">現在のマウス位置</param>
+    public MouseDragEventArgs(Point startLocation, Point lastLocation, Point Location)
     {
       this.StartLocation = startLocation;
       this.LastLocation = lastLocation;
+      this.Location = Location;
     }
   }
 

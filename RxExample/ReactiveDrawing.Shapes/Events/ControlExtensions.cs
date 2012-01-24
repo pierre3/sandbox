@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Reactive;
 using System.Reactive.Linq;
 using System.Windows.Forms;
-using System.Drawing;
 
 namespace ReactiveDrawing
 {
@@ -20,22 +15,16 @@ namespace ReactiveDrawing
     /// </summary>
     /// <param name="control">System.Windows.Forms.Control</param>
     /// <param name="mouseButton">マウスボタン</param>
-    /// <param name="captured">ドラッグ開始時の処理を記述するデリゲート</param>
-    /// <param name="released">ドラッグ完了時の処理を記述するデリゲート</param>
     /// <returns>マウスドラッグイベントのIObservable</returns>
     public static IObservable<MouseDragEventArgs> MouseDragAsObservable(
                                                 this Control control,
-                                                MouseButtons mouseButton,
-                                                Action<MouseEventArgs> captured,
-                                                Action<MouseEventArgs> released)
+                                                MouseButtons mouseButton)
     {
       var down = control.MouseDownAsObservable()
-                  .Where(e => e.Button == mouseButton)
-                  .Do(e => { if (captured != null)captured(e); });
+                  .Where(e => e.Button == mouseButton);
       var move = control.MouseMoveAsObservable();
       var Up = control.MouseUpAsObservable()
-                .Where(e => e.Button == mouseButton)
-                .Do(e => { if (released != null)released(e); });
+                .Where(e => e.Button == mouseButton);
 
       return down
               .SelectMany(
@@ -43,34 +32,9 @@ namespace ReactiveDrawing
               {
                 return
                   move.TakeUntil(Up)
-                      .Select(e => new MouseDragEventArgs(e, e0.Location, e0.Location))
-                      .Scan((e1, e2) => new MouseDragEventArgs(e2, e1.StartLocation, e1.Location));
+                      .Select(e => new MouseDragEventArgs(e0.Location, e0.Location, e.Location))
+                      .Scan((e1, e2) => new MouseDragEventArgs(e1.StartLocation, e1.Location, e2.Location));
               });
-    }
-    
-    /// <summary>
-    ///  MouseDragイベントのIObservableオブジェクト生成(Move_Skip_Take)
-    /// </summary>
-    /// <param name="control">System.Windows.Forms.Control</param>
-    /// <param name="mouseButton">マウスボタン</param>
-    /// <param name="captured">ドラッグ開始時の処理を記述するデリゲート</param>
-    /// <param name="released">ドラッグ完了時の処理を記述するデリゲート</param>
-    /// <returns>マウスドラッグのIObservableオブジェクト</returns>
-    public static IObservable<MouseEventArgs> MouseDragAsObservable_MST(
-                                                this Control control,
-                                                MouseButtons mouseButton,
-                                                Action<MouseEventArgs> captured,
-                                                Action<MouseEventArgs> released)
-    {
-      return
-          control.MouseMoveAsObservable()
-              .SkipUntil(control.MouseDownAsObservable()
-                          .Where(e => e.Button == mouseButton)
-                          .Do(captured))
-              .TakeUntil(control.MouseUpAsObservable()
-                          .Where(e => e.Button == mouseButton)
-                          .Do(released))
-              .Repeat();
     }
 
     /// <summary>

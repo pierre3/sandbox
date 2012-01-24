@@ -25,11 +25,6 @@ namespace ReactiveDrawing
     public static readonly SelectRect Selector = new SelectRect(Color.Black);
     #endregion
 
-    #region Private Fields
-    private List<IShape> m_shapes;
-    private CompositeDisposable m_disposables;
-    #endregion
-
     #region Public Methods
     /// <summary>
     /// コンストラクタ
@@ -40,7 +35,7 @@ namespace ReactiveDrawing
       this.DefaultItem = defaultItem;
       this.m_shapes = new List<IShape>();
       this.m_disposables = new CompositeDisposable();
-      DrawingManager.Selector.Dropped += (o, e) => 
+      DrawingManager.Selector.Dropped += (o, e) =>
       {
         var selectBounds = (o as IShape).Bounds.Abs();
         this.m_shapes.ForEach(
@@ -53,7 +48,7 @@ namespace ReactiveDrawing
     /// </summary>
     public void Clear()
     {
-      this.m_shapes.Clear();  
+      this.m_shapes.Clear();
     }
 
     /// <summary>
@@ -65,7 +60,7 @@ namespace ReactiveDrawing
       m_shapes.ForEach(item => item.Draw(g));
       DefaultItem.Draw(g);
     }
-    
+
     /// <summary>
     /// マウスイベントの停止
     /// </summary>
@@ -81,18 +76,18 @@ namespace ReactiveDrawing
     /// <param name="button">ドラッグイベントに対応するマウスボタン</param>
     public void Run(Control target, MouseButtons button)
     {
-      
+
       IShape active = this.DefaultItem;
-      
+
+      //ボタンが押されていない間のマウスムーブイベント
       this.m_disposables.Add(
-        //MouseMoveイベント
         target.MouseMoveAsObservable()
-          .Where(e => e.Button == MouseButtons.None)  //<-ボタンが押されていない場合のみ通す
+          .Where(e => e.Button == MouseButtons.None)
           .Subscribe(
           e =>
           {
             //カーソルの下にあるm_shapes内のオブジェクトをactiveに設定する。
-            //オブジェクトのない場所にカーソルがある場合はDefaultItemを設定する。
+            //オブジェクトのない場所にカーソルがある場合はDefaultItemがActiveとなる。
             active = this.DefaultItem;
             foreach (IShape item in m_shapes)
             {
@@ -104,12 +99,12 @@ namespace ReactiveDrawing
               }
             };
             target.Cursor = active.Cursor;
-        })
-      );
+          }));
 
+      //マウスダウンイベント
       this.m_disposables.Add(
-        //MouseDragイベント
-        target.MouseDragAsObservable(button,
+        target.MouseDownAsObservable()
+          .Subscribe(
           e =>
           {
             foreach (IShape item in m_shapes)
@@ -117,23 +112,35 @@ namespace ReactiveDrawing
               item.IsSelected = item.Parent == active.Parent;
             }
             target.Refresh();
-          },
-          e =>
-          {
-            var item = active.Drop() as IShape;
-            if (item != null)
-              m_shapes.Add(item);
-            target.Refresh();
-          })
+          }));
+
+      //ドラッグイベント
+      this.m_disposables.Add(
+        target.MouseDragAsObservable(button)
           .Subscribe(
           e =>
           {
             active.Drag(e);
             target.Refresh();
-          })
-      );
+          }));
 
+      //マウスアップイベント
+      this.m_disposables.Add(
+         target.MouseUpAsObservable()
+           .Subscribe(
+           e =>
+           {
+             var item = active.Drop() as IShape;
+             if (item != null)
+               m_shapes.Add(item);
+             target.Refresh();
+           }));
     }
+    #endregion
+
+    #region Private Fields
+    private List<IShape> m_shapes;
+    private CompositeDisposable m_disposables;
     #endregion
 
   }

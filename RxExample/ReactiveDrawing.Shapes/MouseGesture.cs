@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Windows.Forms;
 
@@ -24,7 +23,7 @@ namespace ReactiveDrawing
     /// <summary>マウスジェスチャ登録用コレクション</summary>
     private Dictionary<string, Action> m_gestures;
     /// <summary>イベント解除用</summary>
-    private CompositeDisposable disposables = new CompositeDisposable();
+    private IDisposable disposable;
     #endregion
 
     #region Constructors
@@ -58,51 +57,45 @@ namespace ReactiveDrawing
     /// <param name="interval">移動方向の検出に必要な距離(画素数)</param>
     public void Run(Control target, MouseButtons button, int interval)
     {
-      var commandKey = string.Empty;
+      var move = target.MouseMoveAsObservable();
+      var up = target.MouseUpAsObservable().Where(e => e.Button == button);
 
-      //ドラッグ中の処理
-      this.disposables.Add(
-        target.MouseDragAsObservable(button, null, null)
-          .Select(    //<= マウスの移動方向を↑,↓,←,→の文字に置き換える
-          e =>
+      this.disposable =
+        target.MouseDownAsObservable().Where(e => e.Button == button)
+          .SelectMany(arg0 =>
           {
-            var arrow = GetArrowString(e.Location.X - e.StartLocation.X,
-                                       e.Location.Y - e.StartLocation.Y,
-                                       interval);
-            if (arrow != string.Empty)
-              e.StartLocation = e.Location;
-            return arrow;
+            return move.TakeUntil(up)
+              .Select(arg1 =>
+              {
+                //マウスの移動方向を↑,↓,←,→の文字に置き換える
+                var arrow = GetArrowChar(arg1.Location.X - arg0.Location.X,
+                                         arg1.Location.Y - arg0.Location.Y,
+                                         interval);
+                if (arrow != char.MinValue) //方向を検知(interval以上移動)した場合
+                  arg0 = arg1;  //起点を更新
+                return arrow;
+              })
+             .Where(arrow => arrow != char.MinValue)  //方向を検知した場合のみ通す
+             .DistinctUntilChanged()                  //同じ方向を連続して通さない
+             .Take(this.m_maxCount)                   //最大数(最長コマンドの長さ)までを取得
+             .Aggregate(string.Empty,                 //矢印を連結してstringにする
+                        (commandKey, arrow) =>
+                        {
+                          OnDirectionCaptured(commandKey + arrow);
+                          return commandKey + arrow;
+                        })
+             .Zip(up, (commandKey, _) => commandKey); //マウスUpが来るまで待機
           })
-          .Where(e => e != string.Empty)  //<= 何れかの方向が検知された場合のみ通す
-          .Subscribe(
-          e =>
+          .Subscribe(commandKey =>
           {
-            if (commandKey.Length < this.m_maxCount && !commandKey.EndsWith(e))
+            //ドラッグで取得したコマンドキーが存在したら、対応するコマンドを実行
+            Action command;
+            if (m_gestures.TryGetValue(commandKey, out command))
             {
-              commandKey += e;
-              if (DirectionCaptured != null)
-                DirectionCaptured(this, new MouseGestureEventArgs(commandKey));
+              command();
+              OnCommandExcuted(commandKey);
             }
-          })
-      );
-
-      //ドラッグ終了時の処理
-      this.disposables.Add(
-        target.MouseUpAsObservable()
-        .Where(e => e.Button == button)
-        .Subscribe(
-          e =>
-          {
-            Action gesture;
-            if (m_gestures.TryGetValue(commandKey, out gesture))
-            {
-              gesture();
-              if (CommandExecuted != null)
-                CommandExecuted(this, new MouseGestureEventArgs(commandKey));
-            }
-            commandKey = string.Empty;
-          })
-      );
+          });
     }
 
     /// <summary>
@@ -110,7 +103,7 @@ namespace ReactiveDrawing
     /// </summary>
     public void Stop()
     {
-      this.disposables.Clear();
+      this.disposable.Dispose();
     }
     #endregion
 
@@ -122,22 +115,33 @@ namespace ReactiveDrawing
     /// <param name="dy">移動量y</param>
     /// <param name="interval">矢印の取得に必要な移動量</param>
     /// <returns>移動方向を表す文字(↑,↓,←,→)</returns>
-    private string GetArrowString(int dx, int dy, int interval)
+    private char GetArrowChar(int dx, int dy, int interval)
     {
       int px = Math.Abs(dx);
       int py = Math.Abs(dy);
       if (px > py)
       {
         if (px < interval)
-          return string.Empty;
-        return (dx > 0) ? "→" : "←";
+          return char.MinValue;
+        return (dx > 0) ? '→' : '←';
       }
       else
       {
         if (py < interval)
-          return string.Empty;
-        return (dy > 0) ? "↓" : "↑";
+          return char.MinValue;
+        return (dy > 0) ? '↓' : '↑';
       }
+    }
+
+    private void OnDirectionCaptured(string commandKey)
+    {
+      if (this.DirectionCaptured != null)
+        this.DirectionCaptured(this, new MouseGestureEventArgs(commandKey));
+    }
+    private void OnCommandExcuted(string commandKey)
+    {
+      if (this.CommandExecuted != null)
+        this.CommandExecuted(this, new MouseGestureEventArgs(commandKey));
     }
     #endregion
 
