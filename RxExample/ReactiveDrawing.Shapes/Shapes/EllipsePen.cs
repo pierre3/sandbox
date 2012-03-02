@@ -36,10 +36,10 @@ namespace ReactiveDrawing.Shapes
     /// </returns>
     public override IDraggable Drop()
     {
-      if (!this.m_isDragging)
+      if (!this.IsDragging)
         return null;
 
-      this.m_isDragging = false;
+      this.IsDragging = false;
       return new EllipseShape(this.Bounds, this.Color);
     }
 

@@ -1,29 +1,25 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace ReactiveDrawing.Shapes
 {
   /// <summary>
   /// 図形 基本クラス
   /// </summary>
-  public abstract class Shape : IShape
+  public abstract class Shape : IDraggable, IDrawable, ISelectable
   {
     #region Events
     /// <summary>ドロップ実行後に発生するイベント</summary>
-    public event EventHandler Dropped
-    {
-      add { this.m_Dropped += value; }
-      remove { this.m_Dropped -= value; }
-    }
+    public event EventHandler Dropped;
 
     /// <summary>ドラッグ実行後に発生するイベント</summary>
-    public event EventHandler<MouseDragEventArgs> Draged
-    {
-      add { this.m_Draged += value; }
-      remove { this.m_Draged -= value; }
-    }
-    #endregion Events
+    public event EventHandler<MouseDragEventArgs> Draged;
+
+    /// <summary>選択状態変更イベント</summary>
+    public event EventHandler SelectChanged;
+    #endregion
 
     #region Properties
     /// <summary>マウスカーソル</summary>
@@ -33,18 +29,34 @@ namespace ReactiveDrawing.Shapes
     public Color Color { set; get; }
 
     /// <summary>外接矩形</summary>
-    public Rectangle Bounds { get; protected set; }
+    public Rectangle Bounds
+    {
+      get { return _bounds; }
+      set
+      { this.SetBounds(value.X, value.Y, value.Width, value.Height); }
+    }
 
     /// <summary>ドラッグされている間 Trueを返す</summary>
-    public bool IsDragging { get { return m_isDragging; } }
-
+    public bool IsDragging { get; protected set; }
 
     /// <summary>選択されている間 Trueを返す</summary>
-    public bool IsSelected { set; get; }
+    public bool IsSelected
+    {
+      get { return this._isSelected; }
+      set
+      {
+        if (this._isSelected == value)
+          return;
+        this._isSelected = value;
+        OnSelectChanged();
+      }
+    }
 
-    /// <summary>親オブジェクト</summary>
-    public IShape Parent { get; set; }
+    /// <summary>操作中のオブジェクト</summary>
+    public ResizeHandle ActiveHandle { get; protected set; }
 
+    /// <summary>リサイズハンドル</summary>
+    protected ResizeHandle[] Handles { get; set; }
     #endregion
 
     #region Constructors
@@ -70,13 +82,38 @@ namespace ReactiveDrawing.Shapes
     /// <param name="color">色</param>
     protected Shape(Rectangle bounds, Color color)
     {
+      this.Handles = new ResizeHandle[0];
       this.Bounds = bounds.Abs();
       this.Color = color;
-      this.Parent = this;
+      
     }
     #endregion
 
-    #region abstract Methods
+    #region Public Methods
+    /// <summary>
+    /// 選択枠による選択
+    /// </summary>
+    /// <remarks>
+    /// Boundsが選択枠に含まれる場合にIsSelectedをTrueに設定する。
+    /// 含まれない場合はFalseに設定する
+    /// </remarks>
+    /// <param name="selectRect">選択枠</param>
+    public void SelectBy(Rectangle selectRect)
+    {
+      this.IsSelected = selectRect.Contains(this.Bounds.Abs());
+    }
+
+    /// <summary>
+    /// 指定ハンドルをアクティブにする
+    /// </summary>
+    /// <param name="alignment">アクティブにするハンドルを指定</param>
+    public void ActiveateHandle(ResizeHandle.HandleAlignment alignment)
+    {
+      this.ActiveHandle = this.Handles.Where(h => h.Alignment == alignment)
+                                      .FirstOrDefault();
+    }
+
+    #region Abstract Methods
     /// <summary>
     /// 図形を描画します
     /// </summary>
@@ -104,16 +141,26 @@ namespace ReactiveDrawing.Shapes
     /// </returns>
     public abstract IDraggable Drop();
     #endregion
+    #endregion
 
-    #region protected Methods
+    #region Protected Methods
+    /// <summary>
+    /// 選択状態変更イベント 発生
+    /// </summary>
+    protected void OnSelectChanged()
+    {
+      if (this.SelectChanged != null)
+        this.SelectChanged(this, new EventArgs());
+    }
+
     /// <summary>
     /// Dragedイベントを発生させる
     /// </summary>
     /// <param name="e">マウスドラッグイベントデータ</param>
     protected void OnDraged(MouseDragEventArgs e)
     {
-      if (this.m_Draged != null)
-        this.m_Draged(this, e);
+      if (this.Draged != null)
+        this.Draged(this, e);
     }
 
     /// <summary>
@@ -122,10 +169,10 @@ namespace ReactiveDrawing.Shapes
     /// <param name="e">イベントデータ</param>
     protected void OnDropped(EventArgs e)
     {
-      if (this.m_Dropped != null)
-        this.m_Dropped(this, e);
-
+      if (this.Dropped != null)
+        this.Dropped(this, e);
     }
+
     /// <summary>
     /// 外接矩形の設定
     /// </summary>
@@ -138,8 +185,8 @@ namespace ReactiveDrawing.Shapes
     /// </remarks>
     protected void SetBounds(int x, int y, int width, int height)
     {
-      Bounds = new Rectangle(x, y, width, height);
-      foreach (ResizeHandle handle in this.m_handles)
+      _bounds = new Rectangle(x, y, width, height);
+      foreach (ResizeHandle handle in this.Handles)
       {
         handle.SetLocation();
       }
@@ -158,28 +205,13 @@ namespace ReactiveDrawing.Shapes
       this.SetBounds(location.X, location.Y, size.Width, size.Height);
     }
 
-    /// <summary>
-    /// 外接矩形の設定
-    /// </summary>
-    /// <param name="rect">矩形</param>
-    /// <remarks>
-    /// 新しい矩形の座標に合わせてリサイズハンドルの位置を再設定します
-    /// </remarks>
-    protected void SetBounds(Rectangle rect)
-    {
-      this.SetBounds(rect.X, rect.Y, rect.Width, rect.Height);
-    }
+
     #endregion
 
-    #region protected Feilds
-    /// <summary>リサイズハンドル</summary>
-    protected ResizeHandle[] m_handles = new ResizeHandle[0];
-    /// <summary>ドラッグされている間 Trueを返す</summary>
-    protected bool m_isDragging;
-    /// <summary>ドロップ処理後イベント</summary>
-    protected EventHandler m_Dropped;
-    /// <summary>ドラッグ処理後イベント</summary>
-    protected EventHandler<MouseDragEventArgs> m_Draged;
+    #region Private Feilds
+    /// <summary>選択状態</summary>
+    private bool _isSelected;
+    private Rectangle _bounds;
     #endregion
   }
 }

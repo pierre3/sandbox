@@ -44,7 +44,7 @@ namespace ReactiveDrawing.Shapes
     /// <param name="g">Graphicsオブジェクト</param>
     public override void Draw(Graphics g)
     {
-      if (!this.m_isDragging)
+      if (!this.IsDragging)
         return;
 
       using (Pen pen = new Pen(Color))
@@ -60,7 +60,7 @@ namespace ReactiveDrawing.Shapes
     /// <param name="e">マウスドラッグイベントデータ</param>
     public override void Drag(MouseDragEventArgs e)
     {
-      this.m_isDragging = true;
+      this.IsDragging = true;
       Bounds = new Rectangle(
                   e.StartLocation,
                   (Size)e.Location - (Size)e.StartLocation);
@@ -74,15 +74,16 @@ namespace ReactiveDrawing.Shapes
     /// </returns>
     public override IDraggable Drop()
     {
-      if (!this.m_isDragging)
+      if (!this.IsDragging)
         return null;
 
-      this.m_isDragging = false;
+      this.IsDragging = false;
       return new RectangleShape(this.Bounds, this.Color);
     }
 
     #endregion Public Methods
 
+    #region Protected Methods
     /// <summary>
     /// 図形の描画
     /// </summary>
@@ -92,5 +93,6 @@ namespace ReactiveDrawing.Shapes
     {
       g.DrawRectangle(pen, this.Bounds.Abs());
     }
+    #endregion
   }
 }

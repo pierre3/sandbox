@@ -34,7 +34,7 @@ namespace ReactiveDrawing.Shapes
     /// <param name="e">マウスドラッグイベントデータ</param>
     public override void Drag(MouseDragEventArgs e)
     {
-      this.m_isDragging = true;
+      this.IsDragging = true;
       Bounds = new Rectangle(e.StartLocation, (Size)e.Location - (Size)e.StartLocation);
     }
 
@@ -46,10 +46,10 @@ namespace ReactiveDrawing.Shapes
     /// </returns>
     public override IDraggable Drop()
     {
-      if (!this.m_isDragging)
+      if (!this.IsDragging)
         return null;
 
-      this.m_isDragging = false;
+      this.IsDragging = false;
       this.OnDropped(new EventArgs());
       return null;
     }

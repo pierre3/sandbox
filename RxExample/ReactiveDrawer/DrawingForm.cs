@@ -20,39 +20,39 @@ namespace DrawingFormApp
       this.DoubleBuffered = true;
 
       var drawingManager = new DrawingManager(new RectanglePen(Color.Blue));
-      drawingManager.Run(this, MouseButtons.Left);
+      drawingManager.Start(this, MouseButtons.Left);
 
-      var gestures = new MouseGesture();
-      gestures.DirectionCaptured += (o, e) => this.Text = e.CommandKey;
-      gestures.Add("→←→",
+      var gesture = new MouseGesture();
+      gesture.DirectionCaptured += (o, e) => this.Text = e.Gesture;
+      gesture.Add("→←→",
         () =>
         {
           drawingManager.Clear();
           this.Text = "クリア";
           this.Refresh();
         });
-      gestures.Add("↑↓",
+      gesture.Add("↑↓",
         () =>
         {
           drawingManager.DefaultItem = new EllipsePen(Color.Red);
           this.Text = "楕円";
           this.Refresh();
         });
-      gestures.Add("↑→↓←",
+      gesture.Add("↑→↓←",
         () =>
         {
           drawingManager.DefaultItem = new RectanglePen(Color.Blue);
           this.Text = "四角形";
           this.Refresh();
         });
-      gestures.Add("↓→↑",
+      gesture.Add("↓→↑",
         () =>
         {
           drawingManager.DefaultItem = DrawingManager.Selector;
           this.Text = "選択";
           this.Refresh();
         });
-      gestures.Run(this, MouseButtons.Right, 30);
+      gesture.Start(this, MouseButtons.Right, 30);
 
 
       this.Paint += (o, e) => drawingManager.Draw(e.Graphics);

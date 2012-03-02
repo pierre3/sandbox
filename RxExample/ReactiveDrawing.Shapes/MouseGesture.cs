@@ -19,9 +19,9 @@ namespace ReactiveDrawing
 
     #region Private Fields
     /// <summary>コマンド最大文字数</summary>
-    private int m_maxCount;
+    private int maxCount;
     /// <summary>マウスジェスチャ登録用コレクション</summary>
-    private Dictionary<string, Action> m_gestures;
+    private Dictionary<string, Action> gestures;
     /// <summary>イベント解除用</summary>
     private IDisposable disposable;
     #endregion
@@ -32,21 +32,21 @@ namespace ReactiveDrawing
     /// </summary>
     public MouseGesture()
     {
-      this.m_gestures = new Dictionary<string, Action>();
+      this.gestures = new Dictionary<string, Action>();
     }
     #endregion
 
     #region Public Methods
     /// <summary>
-    /// ジェスチャコマンドの追加
+    /// ジェスチャの追加
     /// </summary>
-    /// <param name="commandKey">コマンド</param>
-    /// <param name="command">ジェスチャ</param>
-    public void Add(string commandKey, Action command)
+    /// <param name="gesture">ジェスチャパターン</param>
+    /// <param name="command">コマンド</param>
+    public void Add(string gesture, Action command)
     {
-      this.m_gestures.Add(commandKey, command);
-      if (this.m_maxCount < commandKey.Length)
-        this.m_maxCount = commandKey.Length;
+      this.gestures.Add(gesture, command);
+      if (this.maxCount < gesture.Length)
+        this.maxCount = gesture.Length;
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ namespace ReactiveDrawing
     /// <param name="target">マウスジェスチャを動作させるコントロール</param>
     /// <param name="button">マウスボタン</param>
     /// <param name="interval">移動方向の検出に必要な距離(画素数)</param>
-    public void Run(Control target, MouseButtons button, int interval)
+    public void Start(Control target, MouseButtons button, int interval)
     {
       var move = target.MouseMoveAsObservable();
       var up = target.MouseUpAsObservable().Where(e => e.Button == button);
@@ -77,23 +77,23 @@ namespace ReactiveDrawing
               })
              .Where(arrow => arrow != char.MinValue)  //方向を検知した場合のみ通す
              .DistinctUntilChanged()                  //同じ方向を連続して通さない
-             .Take(this.m_maxCount)                   //最大数(最長コマンドの長さ)までを取得
+             .Take(this.maxCount)                     //最大数(最長コマンドの長さ)までを取得
              .Aggregate(string.Empty,                 //矢印を連結してstringにする
-                        (commandKey, arrow) =>
+                        (gesture, arrow) =>
                         {
-                          OnDirectionCaptured(commandKey + arrow);
-                          return commandKey + arrow;
+                          OnDirectionCaptured(gesture + arrow);
+                          return gesture + arrow;
                         })
-             .Zip(up, (commandKey, _) => commandKey); //マウスUpが来るまで待機
+             .Zip(up, (gesture, _) => gesture); //マウスUpが来るまで待機
           })
-          .Subscribe(commandKey =>
+          .Subscribe(gesture =>
           {
-            //ドラッグで取得したコマンドキーが存在したら、対応するコマンドを実行
+            //ドラッグで取得したジェスチャパターンが存在したら、対応するコマンドを実行
             Action command;
-            if (m_gestures.TryGetValue(commandKey, out command))
+            if (gestures.TryGetValue(gesture, out command))
             {
               command();
-              OnCommandExcuted(commandKey);
+              OnCommandExcuted(gesture);
             }
           });
     }
@@ -133,15 +133,24 @@ namespace ReactiveDrawing
       }
     }
 
-    private void OnDirectionCaptured(string commandKey)
+    /// <summary>
+    /// 方向検知後イベント 発生
+    /// </summary>
+    /// <param name="gesture">検知済み移動方向パターン</param>
+    private void OnDirectionCaptured(string gesture)
     {
       if (this.DirectionCaptured != null)
-        this.DirectionCaptured(this, new MouseGestureEventArgs(commandKey));
+        this.DirectionCaptured(this, new MouseGestureEventArgs(gesture));
     }
-    private void OnCommandExcuted(string commandKey)
+
+    /// <summary>
+    /// コマンド実行後イベント 発生
+    /// </summary>
+    /// <param name="gesture">ジェスチャパターン</param>
+    private void OnCommandExcuted(string gesture)
     {
       if (this.CommandExecuted != null)
-        this.CommandExecuted(this, new MouseGestureEventArgs(commandKey));
+        this.CommandExecuted(this, new MouseGestureEventArgs(gesture));
     }
     #endregion
 
@@ -151,15 +160,15 @@ namespace ReactiveDrawing
     /// </summary>
     public class MouseGestureEventArgs : EventArgs
     {
-      /// <summary>コマンド</summary>
-      public string CommandKey { set; get; }
+      /// <summary>ジェスチャパターン文字列</summary>
+      public string Gesture { set; get; }
       /// <summary>
       /// コンストラクタ
       /// </summary>
-      /// <param name="commandKey">コマンド</param>
-      public MouseGestureEventArgs(string commandKey)
+      /// <param name="gesture">ジェスチャパターン</param>
+      public MouseGestureEventArgs(string gesture)
       {
-        this.CommandKey = commandKey;
+        this.Gesture = gesture;
       }
     }
     #endregion

@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace ReactiveDrawing.Shapes
 {
@@ -18,30 +19,24 @@ namespace ReactiveDrawing.Shapes
     public RectangleShape(Rectangle bounds, Color color)
       : base(bounds, color)
     {
+      this.IsDragging = false;
       this.IsSelected = true;
       this.Cursor = Cursors.SizeAll;
-      
+
       //リサイズハンドルの設定
       Size handleSize = new Size(7, 7);
-      this.m_handles = new ResizeHandle[8]
+      this.Handles = new ResizeHandle[8]
           {
-            CreateLeftTopHandle(handleSize),
-            CreateTopCenterHandle(handleSize),
-            CreateTopRightHandle(handleSize),
-            CreateCenterLeftHandle(handleSize),
-            CreateCenterRightHandle(handleSize),
-            CreateBottomLeftHandle(handleSize),
-            CreateBottomCenterHandle(handleSize),
-            CreateBottomRightHandle(handleSize)
+            this.CreateTopLeftHandle(handleSize),
+            this.CreateTopCenterHandle(handleSize),
+            this.CreateTopRightHandle(handleSize),
+            this.CreateCenterLeftHandle(handleSize),
+            this.CreateCenterRightHandle(handleSize),
+            this.CreateBottomLeftHandle(handleSize),
+            this.CreateBottomCenterHandle(handleSize),
+            this.CreateBottomRightHandle(handleSize)
           };
 
-      foreach (ResizeHandle h in this.m_handles)
-      {
-        h.Parent = this;
-        h.Dropped += (o, e) => this.m_isDragging = false;
-        h.SetLocation();
-      }
-      
     }
 
     /// <summary>
@@ -54,6 +49,7 @@ namespace ReactiveDrawing.Shapes
     #endregion
 
     #region Public Methods
+
     /// <summary>
     /// 描画
     /// </summary>
@@ -63,15 +59,15 @@ namespace ReactiveDrawing.Shapes
 
       using (Pen pen = new Pen(Color))
       {
-        if (this.m_isDragging)
+        if (this.IsDragging)
           pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
         this.DrawShape(g, pen);
       }
 
-      if (this.m_isDragging || !this.IsSelected)
+      if (this.IsDragging || !this.IsSelected)
         return;
 
-      foreach (ResizeHandle handle in this.m_handles)
+      foreach (ResizeHandle handle in this.Handles)
       {
         handle.Draw(g);
       }
@@ -83,10 +79,15 @@ namespace ReactiveDrawing.Shapes
     /// <param name="e">マウスドラッグイベントデータ</param>
     public override void Drag(MouseDragEventArgs e)
     {
-      this.m_isDragging = true;
-      this.SetBounds(
-                  Bounds.Location + (Size)e.Location - (Size)e.LastLocation,
-                  Bounds.Size);
+      this.IsDragging = true;
+      if (this.ActiveHandle != null)
+      {
+        this.ActiveHandle.Drag(e);
+        return;
+      }
+      this.SetBounds(Bounds.Location + (Size)e.Location - (Size)e.LastLocation,
+                     Bounds.Size);
+
     }
 
     /// <summary>
@@ -96,11 +97,14 @@ namespace ReactiveDrawing.Shapes
     /// <returns>マウスポインタと重なっているIDraggableオブジェクトを返す</returns>
     public override IDraggable HitTest(Point location)
     {
-      foreach (ResizeHandle handle in this.m_handles)
+      foreach (ResizeHandle handle in this.Handles)
       {
-        var hitItem = handle.HitTest(location);
-        if (hitItem != null)
-          return hitItem;
+        ActiveHandle = handle.HitTest(location) as ResizeHandle;
+        if (ActiveHandle != null)
+        {
+          this.Cursor = ActiveHandle.Cursor;
+          return this;
+        }
       }
 
       //カーソルが図形の内部にあるかを判定する
@@ -108,7 +112,12 @@ namespace ReactiveDrawing.Shapes
       using (Region region = new Region(AddShapeTo(path)))
       {
         //GraphicsPath.IsVisibleでも判定できるが、非常に遅いためRegionで判定する
-        return region.IsVisible(location) ? this : null;
+        if (!region.IsVisible(location))
+        {
+          return null;
+        }
+        this.Cursor = Cursors.SizeAll;
+        return this;
       }
     }
 
@@ -118,13 +127,14 @@ namespace ReactiveDrawing.Shapes
     /// <returns>常にNullを返す</returns>
     public override IDraggable Drop()
     {
-      if (this.m_isDragging)
+      if (this.IsDragging)
       {
         //ドラッグ中はマイナスのサイズ(Left,TopがRight,Bottomより大)を許し、
         //ドロップしたタイミングでプラスのサイズとなるように補正する。
-        this.SetBounds(this.Bounds.Abs());
-        this.m_isDragging = false;
+        this.Bounds = this.Bounds.Abs();
+        this.IsDragging = false;
       }
+      this.OnDropped(new System.EventArgs());
       return null;
     }
     #endregion
@@ -149,169 +159,6 @@ namespace ReactiveDrawing.Shapes
     {
       path.AddRectangle(Bounds);
       return path;
-    }
-    #endregion
-
-    #region Private Methods
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateLeftTopHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeNWSE, handleSize,
-                           () => this.Bounds.Location);
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(e.Location.X, e.Location.Y,
-                         this.Bounds.Right - e.Location.X, this.Bounds.Bottom - e.Location.Y);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateTopCenterHandle(Size handleSize)
-    {
-
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeNS, handleSize,
-                           () => new Point((this.Bounds.Left + this.Bounds.Right) / 2, this.Bounds.Top));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(this.Bounds.Left, e.Location.Y,
-                         this.Bounds.Width, this.Bounds.Bottom - e.Location.Y);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateTopRightHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeNESW, handleSize,
-                           () => new Point(this.Bounds.Right, this.Bounds.Top));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(this.Bounds.Left, e.Location.Y,
-                         e.Location.X - this.Bounds.Left, this.Bounds.Bottom - e.Location.Y);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateCenterLeftHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeWE, handleSize,
-                           () => new Point(this.Bounds.Left, (this.Bounds.Top + this.Bounds.Bottom) / 2));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(e.Location.X, this.Bounds.Top,
-                         this.Bounds.Right - e.Location.X, this.Bounds.Height);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateCenterRightHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeWE, handleSize,
-                           () => new Point(Bounds.Right, (this.Bounds.Top + this.Bounds.Bottom) / 2));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(this.Bounds.Left, this.Bounds.Top,
-                         e.Location.X - this.Bounds.Left, this.Bounds.Height);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateBottomLeftHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeNESW, handleSize,
-                           () => new Point(Bounds.Left, this.Bounds.Bottom));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(e.Location.X, this.Bounds.Top,
-                         this.Bounds.Right - e.Location.X, e.Location.Y - this.Bounds.Top);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateBottomCenterHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeNS, handleSize,
-                           () => new Point((this.Bounds.Left + this.Bounds.Right) / 2, this.Bounds.Bottom));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(this.Bounds.Left, this.Bounds.Top,
-                         this.Bounds.Width, e.Location.Y - this.Bounds.Top);
-        };
-      return result;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="handleSize"></param>
-    /// <returns></returns>
-    private ResizeHandle CreateBottomRightHandle(Size handleSize)
-    {
-      var result
-        = new ResizeHandle(this.Color, Cursors.SizeNWSE, handleSize,
-                           () => new Point(this.Bounds.Right, this.Bounds.Bottom));
-      result.Draged +=
-        (o, e) =>
-        {
-          this.m_isDragging = true;
-          this.SetBounds(this.Bounds.Left, this.Bounds.Top,
-                         e.Location.X - this.Bounds.Left, e.Location.Y - this.Bounds.Top);
-        };
-      return result;
     }
     #endregion
   }

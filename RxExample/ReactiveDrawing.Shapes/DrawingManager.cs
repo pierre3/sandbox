@@ -5,6 +5,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Windows.Forms;
 using ReactiveDrawing.Shapes;
+using System.Linq;
 
 namespace ReactiveDrawing
 {
@@ -14,8 +15,16 @@ namespace ReactiveDrawing
   public class DrawingManager
   {
     #region Properties
-    /// <summary>規定の描画オブジェクト</summary>
-    public IShape DefaultItem { set; get; }
+    /// <summary>規定のドラッグオブジェクト</summary>
+    public IDraggable DefaultItem { set; get; }
+    /// <summary>管理対象オブジェクトのコレクション</summary>
+    private List<IDraggable> Items { get; set; }
+    /// <summary>選択中のオブジェクトを管理するオブジェクト</summary>
+    private CompositeDraggable SelectedItems { set; get; }
+    /// <summary>選択可能なオブジェクトのコレクション</summary>
+    private IEnumerable<ISelectable> Selectables { get; set; }
+    /// <summary>マウスイベントのデタッチ用</summary>
+    private CompositeDisposable Disposables { get; set; }
     #endregion
 
     #region Constants
@@ -30,16 +39,21 @@ namespace ReactiveDrawing
     /// コンストラクタ
     /// </summary>
     /// <param name="defaultItem">規定の描画オブジェクト</param>
-    public DrawingManager(IShape defaultItem)
+    public DrawingManager(IDraggable defaultItem)
     {
       this.DefaultItem = defaultItem;
-      this.m_shapes = new List<IShape>();
-      this.m_disposables = new CompositeDisposable();
+      this.Items = new List<IDraggable>();
+      this.Disposables = new CompositeDisposable();
+      this.Selectables = Enumerable.Empty<ISelectable>();
+      this.SelectedItems = new CompositeDraggable(Enumerable.Empty<IDraggable>());
       DrawingManager.Selector.Dropped += (o, e) =>
       {
-        var selectBounds = (o as IShape).Bounds.Abs();
-        this.m_shapes.ForEach(
-          shape => shape.IsSelected = selectBounds.Contains(shape.Bounds));
+        var selectBounds = (o as Shape).Bounds.Abs();
+        foreach (ISelectable shape in this.Items.OfType<ISelectable>())
+          shape.SelectBy(selectBounds);
+
+        SelectedItems = new CompositeDraggable(
+          this.Selectables.Where(item => item.IsSelected).OfType<IDraggable>());
       };
     }
 
@@ -48,7 +62,8 @@ namespace ReactiveDrawing
     /// </summary>
     public void Clear()
     {
-      this.m_shapes.Clear();
+      this.Items.Clear();
+      this.Selectables = Enumerable.Empty<ISelectable>();
     }
 
     /// <summary>
@@ -57,8 +72,14 @@ namespace ReactiveDrawing
     /// <param name="g">Graphicsオブジェクト</param>
     public void Draw(Graphics g)
     {
-      m_shapes.ForEach(item => item.Draw(g));
-      DefaultItem.Draw(g);
+
+      foreach (IDrawable item in Items.OfType<IDrawable>())
+        item.Draw(g);
+
+      var DrawItem = DefaultItem as IDrawable;
+      if (DrawItem != null)
+        DrawItem.Draw(g);
+
     }
 
     /// <summary>
@@ -66,7 +87,7 @@ namespace ReactiveDrawing
     /// </summary>
     public void Stop()
     {
-      this.m_disposables.Clear();
+      this.Disposables.Clear();
     }
 
     /// <summary>
@@ -74,24 +95,33 @@ namespace ReactiveDrawing
     /// </summary>
     /// <param name="target">イベント発生元コントロール</param>
     /// <param name="button">ドラッグイベントに対応するマウスボタン</param>
-    public void Run(Control target, MouseButtons button)
+    public void Start(Control target, MouseButtons button)
     {
 
-      IShape active = this.DefaultItem;
+      IDraggable active = this.DefaultItem;
 
       //ボタンが押されていない間のマウスムーブイベント
-      this.m_disposables.Add(
+      this.Disposables.Add(
         target.MouseMoveAsObservable()
           .Where(e => e.Button == MouseButtons.None)
           .Subscribe(
           e =>
           {
+            //選択中のオブジェクトを先行してチェック
+            active = SelectedItems.HitTest(e.Location);
+            if (active != null)
+            {
+              target.Cursor = active.Cursor;
+              return;
+            }
+
             //カーソルの下にあるm_shapes内のオブジェクトをactiveに設定する。
             //オブジェクトのない場所にカーソルがある場合はDefaultItemがActiveとなる。
-            active = this.DefaultItem;
-            foreach (IShape item in m_shapes)
+            active = DefaultItem;
+
+            foreach (IDraggable item in Items.Reverse<IDraggable>())
             {
-              var result = item.HitTest(e.Location) as IShape;
+              var result = item.HitTest(e.Location);
               if (result != null)
               {
                 active = result;
@@ -102,20 +132,25 @@ namespace ReactiveDrawing
           }));
 
       //マウスダウンイベント
-      this.m_disposables.Add(
+      this.Disposables.Add(
         target.MouseDownAsObservable()
           .Subscribe(
           e =>
           {
-            foreach (IShape item in m_shapes)
+            var act = active as ISelectable;
+            if (act != null && !act.IsSelected)
             {
-              item.IsSelected = item.Parent == active.Parent;
-            }
-            target.Refresh();
+              foreach (ISelectable item in this.Selectables)
+              {
+                item.IsSelected = item == act;
+              }
+              this.SelectedItems = new CompositeDraggable(Enumerable.Empty<IDraggable>());
+              target.Refresh();
+            };
           }));
 
       //ドラッグイベント
-      this.m_disposables.Add(
+      this.Disposables.Add(
         target.MouseDragAsObservable(button)
           .Subscribe(
           e =>
@@ -125,22 +160,25 @@ namespace ReactiveDrawing
           }));
 
       //マウスアップイベント
-      this.m_disposables.Add(
+      this.Disposables.Add(
          target.MouseUpAsObservable()
            .Subscribe(
            e =>
            {
-             var item = active.Drop() as IShape;
+             var item = active.Drop();
              if (item != null)
-               m_shapes.Add(item);
+               this.AddItem(item);
              target.Refresh();
            }));
     }
     #endregion
 
-    #region Private Fields
-    private List<IShape> m_shapes;
-    private CompositeDisposable m_disposables;
+    #region Private Methods
+    private void AddItem(IDraggable item)
+    {
+      Items.Add(item);
+      Selectables = Items.OfType<ISelectable>();
+    }
     #endregion
 
   }
